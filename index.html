@@ -3,96 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cartelera de Pendientes — Dashboard Ejecutivo</title>
-    <!-- Tailwind CSS vía CDN -->
+    <title>Cartelera de Pendientes — Dashboard por Proyectos</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Inter -->
+    <!-- Fuente Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Lucide Icons para iconografía limpia y profesional -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        slate: {
-                            850: '#172033',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        /* Estilos personalizados mínimos para animaciones suaves y scrollbars */
         body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: #f8fafc;
-            color: #0f172a;
         }
-        
-        /* Transición suave para tarjetas y tareas */
-        .task-item {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        /* Scrollbar sutil */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
         }
-        
-        .project-card {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            break-inside: avoid;
+        ::-webkit-scrollbar-track {
+            background: transparent;
         }
-
-        /* Checkbox personalizado */
-        .custom-checkbox:checked {
-            background-color: #4f46e5;
-            border-color: #4f46e5;
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
         }
-
-        /* Animación de entrada */
-        @keyframes fadeInScale {
-            from {
-                opacity: 0;
-                transform: translateY(6px) scale(0.99);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Animación suave de entrada */
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .animate-entry {
-            animation: fadeInScale 0.25s ease-out forwards;
+            animation: fadeSlideIn 0.22s ease-out forwards;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-900">
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
-    <!-- Barra Superior de Navegación y Utilidades -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <!-- Barra Superior -->
+    <header class="bg-white border-b border-slate-200/80 sticky top-0 z-30 shadow-2xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
             <!-- Marca / Título -->
             <div class="flex items-center gap-3">
                 <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-sm flex items-center justify-center">
                     <i data-lucide="kanban" class="w-5 h-5"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-none">Cartelera de Pendientes</h1>
-                    <p class="text-xs text-slate-500 mt-0.5 hidden sm:block">Gestión operativa por proyectos activos</p>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-none">Cartelera de Pendientes</h1>
+                        <!-- Indicador de estado de sincronización -->
+                        <span id="sync-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200/80 transition-colors">
+                            <span id="sync-dot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                            <span id="sync-label">Modo Local</span>
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-0.5 hidden sm:block">Gestión operativa por proyectos activos <span id="room-subtitle" class="text-indigo-600 font-medium"></span></p>
                 </div>
             </div>
 
-            <!-- Botones de Respaldo y Restauración -->
+            <!-- Botones de Nube, Respaldo y Restauración -->
             <div class="flex items-center gap-2">
+                <button onclick="openCloudModal()" id="cloud-config-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-xs transition-colors cursor-pointer" title="Conectar Firebase Realtime Database">
+                    <i data-lucide="cloud" class="w-3.5 h-3.5 text-sky-400"></i>
+                    <span class="hidden sm:inline">Configurar Nube</span>
+                </button>
                 <button onclick="openBackupModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer" title="Exportar o Importar datos en JSON">
                     <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-slate-600"></i>
-                    <span class="hidden md:inline">Respaldo JSON</span>
+                    <span class="hidden md:inline">JSON</span>
                 </button>
                 <button onclick="confirmResetData()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/60 rounded-lg transition-colors cursor-pointer" title="Cargar los proyectos base de la cartelera">
                     <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline">Restaurar ejemplo</span>
+                    <span class="hidden lg:inline">Cargar ejemplo</span>
                 </button>
             </div>
         </div>
@@ -101,208 +86,148 @@
     <!-- Contenido Principal -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- Fila Superior: KPIs Compactos + Formulario Rápido de Nueva Tarea -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-            
-            <!-- Panel de KPIs Globales (4 columnas en desktop) -->
-            <div class="lg:col-span-4 grid grid-cols-3 gap-3">
-                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
-                    <div class="flex items-center justify-between text-slate-500">
-                        <span class="text-xs font-medium uppercase tracking-wider">Proyectos</span>
-                        <i data-lucide="folder-kanban" class="w-4 h-4 text-indigo-500"></i>
-                    </div>
-                    <div class="mt-2">
-                        <span id="kpi-projects" class="text-2xl sm:text-3xl font-bold text-slate-900">0</span>
-                        <p class="text-[11px] text-slate-400 mt-0.5">Activos hoy</p>
+        <!-- Métricas y Filtros Rápidos -->
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+            <!-- Tarjetas KPI -->
+            <div class="lg:col-span-5 grid grid-cols-3 gap-2.5 sm:gap-3">
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-3 sm:p-3.5 shadow-2xs">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Proyectos Activos</span>
+                    <div class="mt-1 flex items-baseline gap-1.5">
+                        <span id="stat-projects" class="text-xl sm:text-2xl font-bold text-slate-900">0</span>
+                        <span class="text-xs text-slate-400">visibles</span>
                     </div>
                 </div>
-
-                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
-                    <div class="flex items-center justify-between text-slate-500">
-                        <span class="text-xs font-medium uppercase tracking-wider">Pendientes</span>
-                        <i data-lucide="clock" class="w-4 h-4 text-amber-500"></i>
-                    </div>
-                    <div class="mt-2">
-                        <span id="kpi-pending" class="text-2xl sm:text-3xl font-bold text-amber-600">0</span>
-                        <p class="text-[11px] text-slate-400 mt-0.5">Por ejecutar</p>
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-3 sm:p-3.5 shadow-2xs">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-amber-600/80 block">Por Hacer</span>
+                    <div class="mt-1 flex items-baseline gap-1.5">
+                        <span id="stat-pending" class="text-xl sm:text-2xl font-bold text-amber-600">0</span>
+                        <span class="text-xs text-slate-400">tareas</span>
                     </div>
                 </div>
-
-                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
-                    <div class="flex items-center justify-between text-slate-500">
-                        <span class="text-xs font-medium uppercase tracking-wider">Listas</span>
-                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
-                    </div>
-                    <div class="mt-2">
-                        <span id="kpi-completed" class="text-2xl sm:text-3xl font-bold text-emerald-600">0</span>
-                        <p class="text-[11px] text-slate-400 mt-0.5">Completadas</p>
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-3 sm:p-3.5 shadow-2xs">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-600/80 block">Completadas</span>
+                    <div class="mt-1 flex items-baseline gap-1.5">
+                        <span id="stat-completed" class="text-xl sm:text-2xl font-bold text-emerald-600">0</span>
+                        <span class="text-xs text-slate-400">hechas</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Formulario de Creación Rápida (8 columnas en desktop) -->
-            <form id="quick-add-form" onsubmit="handleQuickAdd(event)" class="lg:col-span-8 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between gap-3">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-indigo-600 flex items-center gap-1.5">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                        Nueva Actividad en Tablero
-                    </span>
-                    <button type="button" onclick="toggleDetailsInput()" id="toggle-details-btn" class="text-xs text-slate-500 hover:text-indigo-600 font-medium flex items-center gap-1 transition-colors cursor-pointer">
-                        <i data-lucide="list-plus" class="w-3.5 h-3.5"></i>
-                        <span id="toggle-details-text">+ Añadir notas / subtareas</span>
+            <!-- Buscador y Filtros de Estado -->
+            <div class="lg:col-span-7 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
+                <div class="relative flex-1 sm:max-w-xs">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    <input type="text" id="search-input" oninput="handleSearch(this.value)" placeholder="Buscar tarea o proyecto..." class="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                </div>
+
+                <div class="inline-flex bg-slate-200/70 p-1 rounded-xl self-start sm:self-auto">
+                    <button onclick="setFilter('all')" id="filter-all" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-slate-900 shadow-2xs transition-all cursor-pointer">Todas</button>
+                    <button onclick="setFilter('pending')" id="filter-pending" class="px-3 py-1.5 text-xs font-medium rounded-lg text-slate-600 hover:text-slate-900 transition-all cursor-pointer">Pendientes</button>
+                    <button onclick="setFilter('completed')" id="filter-completed" class="px-3 py-1.5 text-xs font-medium rounded-lg text-slate-600 hover:text-slate-900 transition-all cursor-pointer">Completadas</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra de Creación Rápida de Tareas -->
+        <section class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs">
+            <form onsubmit="handleAddTask(event)" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                <div class="md:col-span-4">
+                    <label for="input-project" class="block text-xs font-semibold text-slate-700 mb-1">
+                        Proyecto <span class="font-normal text-slate-400">(existente o nuevo)</span>
+                    </label>
+                    <div class="relative">
+                        <input type="text" id="input-project" list="projects-datalist" required placeholder="Ej. Proyecto PDVSA GAS" autocomplete="off" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                        <datalist id="projects-datalist"></datalist>
+                    </div>
+                </div>
+
+                <div class="md:col-span-6">
+                    <label for="input-title" class="block text-xs font-semibold text-slate-700 mb-1">
+                        Actividad o Tarea Pendiente
+                    </label>
+                    <input type="text" id="input-title" required placeholder="Describe la actividad a realizar..." class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                </div>
+
+                <div class="md:col-span-2">
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] rounded-xl shadow-xs transition-all cursor-pointer">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Agregar</span>
                     </button>
                 </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                    <!-- Selector / Input de Proyecto con Autocompletado -->
-                    <div class="sm:col-span-4 relative">
-                        <label for="input-project" class="sr-only">Proyecto</label>
-                        <div class="relative">
-                            <i data-lucide="folder" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-                            <input 
-                                type="text" 
-                                id="input-project" 
-                                list="projects-datalist" 
-                                required
-                                placeholder="Proyecto (ej. TITAN)" 
-                                autocomplete="off"
-                                class="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400 font-medium text-slate-800"
-                            >
-                            <datalist id="projects-datalist"></datalist>
-                        </div>
-                    </div>
-
-                    <!-- Descripción de la Tarea -->
-                    <div class="sm:col-span-6">
-                        <label for="input-task" class="sr-only">Descripción de la tarea</label>
-                        <input 
-                            type="text" 
-                            id="input-task" 
-                            required
-                            placeholder="¿Qué actividad se debe realizar?" 
-                            class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400 text-slate-800"
-                        >
-                    </div>
-
-                    <!-- Botón Agregar -->
-                    <div class="sm:col-span-2">
-                        <button type="submit" class="w-full h-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-medium rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                            <i data-lucide="plus" class="w-4 h-4"></i>
-                            <span>Agregar</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Campo Opcional para Subtareas / Detalles Técnicos -->
-                <div id="details-container" class="hidden pt-1">
-                    <textarea 
-                        id="input-details" 
-                        rows="2" 
-                        placeholder="Escribe notas técnicas o viñetas separadas por salto de línea (opcional)..."
-                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400 text-slate-700"
-                    ></textarea>
-                </div>
             </form>
-        </div>
+        </section>
 
-        <!-- Barra de Filtros y Búsqueda -->
-        <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <!-- Buscador en tiempo real -->
-            <div class="relative flex-1 max-w-md">
-                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-                <input 
-                    type="text" 
-                    id="search-input" 
-                    oninput="handleFilterChange()"
-                    placeholder="Buscar por proyecto, tarea o detalle técnico..." 
-                    class="w-full pl-10 pr-8 py-2 text-sm bg-slate-50 border border-slate-200/80 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                >
-                <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer">
-                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                </button>
+        <!-- Tablero de Proyectos Activos -->
+        <section id="board-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
+            <!-- Las tarjetas de proyectos activos se renderizan aquí dinámicamente -->
+        </section>
+
+        <!-- Estado Vacío (solo visible si no hay proyectos con tareas) -->
+        <section id="empty-state" class="hidden bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center max-w-lg mx-auto my-8">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="inbox" class="w-6 h-6"></i>
             </div>
-
-            <!-- Pestañas de Filtro de Estado -->
-            <div class="flex items-center bg-slate-100 p-1 rounded-xl self-start sm:self-auto" role="group">
-                <button onclick="setStatusFilter('all')" id="filter-all" class="filter-btn px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-600 shadow-xs cursor-pointer">
-                    Todas
-                </button>
-                <button onclick="setStatusFilter('pending')" id="filter-pending" class="filter-btn px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer">
-                    Pendientes
-                </button>
-                <button onclick="setStatusFilter('completed')" id="filter-completed" class="filter-btn px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer">
-                    Completadas
-                </button>
-            </div>
-        </div>
-
-        <!-- Tablero Principal de Proyectos Activos (Grid Responsivo) -->
-        <div id="projects-board" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
-            <!-- Las tarjetas de proyectos se renderizan dinámicamente aquí -->
-        </div>
-
-        <!-- Estado Vacío (Cuando no hay tareas o el filtro no arroja resultados) -->
-        <div id="empty-state" class="hidden bg-white border border-dashed border-slate-300 rounded-2xl p-12 text-center max-w-lg mx-auto my-8">
-            <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <i data-lucide="clipboard-check" class="w-6 h-6"></i>
-            </div>
-            <h3 id="empty-title" class="text-base font-semibold text-slate-900">No hay proyectos activos en pantalla</h3>
-            <p id="empty-desc" class="text-sm text-slate-500 mt-1">Agrega una nueva tarea arriba para activar un proyecto o ajusta tus filtros de búsqueda.</p>
-            <button id="empty-reset-btn" onclick="resetFilters()" class="mt-4 hidden inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors cursor-pointer">
-                Limpiar filtros
-            </button>
-        </div>
+            <h3 class="text-base font-bold text-slate-900">No hay proyectos activos en pantalla</h3>
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                Los proyectos sin tareas se ocultan automáticamente. Agrega una nueva tarea arriba indicando el nombre del proyecto para activarlo en el tablero.
+            </p>
+        </section>
 
     </main>
 
-    <!-- Modal para Agregar Tarea Rápida a un Proyecto Específico -->
-    <div id="project-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <!-- Pie de Página -->
+    <footer class="border-t border-slate-200/70 bg-white/60 py-4 px-4 text-center text-xs text-slate-400 mt-8">
+        Solo se muestran proyectos con al menos una tarea cargada · Las tareas eliminadas se descartan definitivamente.
+    </footer>
+
+    <!-- Modal para Agregar Tarea Rápida dentro de un Proyecto específico -->
+    <div id="project-task-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6 animate-entry">
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <span class="text-[11px] font-semibold uppercase tracking-wider text-indigo-600">Agregar actividad a</span>
-                    <h3 id="modal-project-title" class="text-lg font-bold text-slate-900 leading-tight">Nombre del Proyecto</h3>
-                </div>
-                <button onclick="closeProjectModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer">
+            <div class="flex items-center justify-between mb-3">
+                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">
+                    <i data-lucide="folder" class="w-3.5 h-3.5"></i>
+                    <span id="modal-project-name">Proyecto</span>
+                </span>
+                <button onclick="closeProjectModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 cursor-pointer">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
-            <form onsubmit="handleModalAdd(event)" class="space-y-4">
-                <input type="hidden" id="modal-project-name">
+            <h3 class="text-base font-bold text-slate-900 mb-3">Nueva tarea en este proyecto</h3>
+            <form onsubmit="handleAddTaskFromModal(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">Descripción de la tarea *</label>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Descripción de la tarea</label>
                     <input type="text" id="modal-task-title" required placeholder="Ej. Revisar entregable final..." class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">Notas técnicas o subtareas (una por línea)</label>
-                    <textarea id="modal-task-details" rows="3" placeholder="Detalle 1&#10;Detalle 2..." class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></textarea>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Notas o subtareas <span class="font-normal text-slate-400">(opcional, una por línea)</span></label>
+                    <textarea id="modal-task-details" rows="3" placeholder="Detalles adicionales o puntos de control..." class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></textarea>
                 </div>
-                <div class="flex items-center justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeProjectModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors cursor-pointer">Guardar Tarea</button>
+                <div class="flex items-center justify-end gap-2 pt-1">
+                    <button type="button" onclick="closeProjectModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs cursor-pointer">Guardar Tarea</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal de Respaldo JSON (Exportar / Importar) -->
+    <!-- Modal de Respaldo JSON -->
     <div id="backup-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 animate-entry">
-            <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center justify-between mb-2">
                 <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
                     <i data-lucide="database" class="w-4 h-4 text-indigo-600"></i>
-                    Respaldo de Cartelera (JSON)
+                    Respaldo e Importación (JSON)
                 </h3>
                 <button onclick="closeBackupModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 cursor-pointer">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
-            <p class="text-xs text-slate-500 mb-3">Copia este código para respaldar tus tareas activas o pega un respaldo previo para restaurarlo.</p>
-            
-            <textarea id="json-textarea" rows="7" class="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-700"></textarea>
-            
+            <p class="text-xs text-slate-500 mb-3">
+                Copia este JSON para respaldar tu tablero o pega un respaldo previo para restaurarlo.
+            </p>
+            <textarea id="json-backup-textarea" rows="8" class="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-700"></textarea>
             <div class="flex flex-wrap items-center justify-between gap-2 mt-4">
-                <button type="button" onclick="copyJsonToClipboard()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer">
+                <button type="button" onclick="copyJsonToClipboard()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl cursor-pointer">
                     <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                     Copiar JSON
                 </button>
@@ -310,28 +235,98 @@
                     <button type="button" onclick="closeBackupModal()" class="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">Cerrar</button>
                     <button type="button" onclick="importJsonData()" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs cursor-pointer">
                         <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-                        Importar y Reemplazar
+                        Importar y Aplicar
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Confirmación Personalizado (Sin usar window.confirm) -->
+    <!-- Modal de Configuración de Nube (Firebase Realtime Database) -->
+    <div id="cloud-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-xl w-full p-6 animate-entry my-auto">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="cloud-cog" class="w-5 h-5 text-indigo-600"></i>
+                    Sincronización en Tiempo Real (Firebase)
+                </h3>
+                <button onclick="closeCloudModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3 mb-4 text-xs text-slate-700 space-y-1">
+                <p class="font-semibold text-indigo-900">¿Cómo conectar tu base de datos gratuita?</p>
+                <ol class="list-decimal list-inside space-y-0.5 text-slate-600">
+                    <li>Crea un proyecto gratis en <span class="font-medium text-slate-800">console.firebase.google.com</span>.</li>
+                    <li>Ve a <span class="font-medium text-slate-800">Compilación &gt; Realtime Database</span>, créala en modo prueba y copia tu <code class="bg-white px-1 rounded">databaseURL</code>.</li>
+                    <li>En <span class="font-medium text-slate-800">Configuración del proyecto</span>, registra una app Web y pega el bloque <code class="bg-white px-1 rounded">firebaseConfig</code> aquí abajo.</li>
+                </ol>
+            </div>
+
+            <form onsubmit="handleSaveCloudConfig(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre de Espacio / Sala (para aislar tus datos)</label>
+                    <input type="text" id="cloud-room-name" placeholder="cartelera-principal" value="cartelera-principal" class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-semibold text-slate-700">Pega aquí tu objeto <code class="text-indigo-600">firebaseConfig</code> o JSON</label>
+                        <span class="text-[11px] text-slate-400">Acepta formato JS o JSON</span>
+                    </div>
+                    <textarea id="cloud-config-raw" rows="5" placeholder='const firebaseConfig = {&#10;  apiKey: "AIzaSy...",&#10;  authDomain: "tu-app.firebaseapp.com",&#10;  databaseURL: "https://tu-app-default-rtdb.firebaseio.com",&#10;  projectId: "tu-app"&#10;};' class="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-500 text-slate-700"></textarea>
+                </div>
+
+                <!-- Sección de Enlace Mágico para sincronizar otro dispositivo -->
+                <div id="share-link-box" class="hidden bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-emerald-900 flex items-center gap-1.5">
+                            <i data-lucide="smartphone" class="w-3.5 h-3.5 text-emerald-600"></i>
+                            Conectar otro dispositivo (Teléfono / PC)
+                        </span>
+                        <button type="button" onclick="copyMagicLink()" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-800 bg-white hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors cursor-pointer">
+                            <i data-lucide="link" class="w-3 h-3"></i>
+                            Copiar enlace mágico
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-emerald-700 leading-snug">
+                        Abre este enlace en tu teléfono para autoconfigurar la misma base de datos al instante sin volver a escribir claves.
+                    </p>
+                    <input type="text" id="magic-link-input" readonly class="w-full px-2.5 py-1.5 text-[11px] font-mono bg-white/90 border border-emerald-200 rounded-lg text-slate-600 focus:outline-none">
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" id="disconnect-cloud-btn" onclick="disconnectCloud()" class="hidden px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer">
+                        Desconectar y volver a Local
+                    </button>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button type="button" onclick="closeCloudModal()" class="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">Cancelar</button>
+                        <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs cursor-pointer">
+                            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                            Conectar y Sincronizar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación Personalizado -->
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-sm w-full p-6 animate-entry">
             <div class="flex items-center gap-3 text-amber-600 mb-2">
                 <div class="p-2 bg-amber-50 rounded-xl">
                     <i data-lucide="alert-triangle" class="w-5 h-5"></i>
                 </div>
-                <h3 class="text-base font-bold text-slate-900">¿Restaurar datos iniciales?</h3>
+                <h3 class="text-base font-bold text-slate-900">¿Cargar datos iniciales?</h3>
             </div>
             <p class="text-xs text-slate-600 leading-relaxed mb-5">
-                Esta acción reemplazará el tablero actual con los proyectos y pendientes base de la cartelera inicial.
+                Esta acción reemplazará el tablero actual (en la nube si estás conectado, o en local) con los proyectos y pendientes base de la cartelera inicial.
             </p>
             <div class="flex items-center justify-end gap-2">
                 <button onclick="closeConfirmModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">Cancelar</button>
-                <button onclick="executeResetData()" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs cursor-pointer">Sí, restaurar</button>
+                <button onclick="executeResetData()" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs cursor-pointer">Sí, cargar ejemplo</button>
             </div>
         </div>
     </div>
@@ -344,115 +339,138 @@
         </div>
     </div>
 
+    <!-- SDK Modular de Firebase (App + Realtime Database) vía CDN oficial -->
+    <script type="module">
+        import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, off } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        window.FirebaseRTDB = {
+            initializeApp,
+            deleteApp,
+            getDatabase,
+            ref,
+            set,
+            onValue,
+            off
+        };
+        window.dispatchEvent(new Event('firebase-sdk-ready'));
+    </script>
+
     <script>
         // =========================================================================
         // ESTADO Y DATOS INICIALES (Extraídos de la cartelera del usuario)
         // =========================================================================
         const STORAGE_KEY = 'cartelera_pendientes_v1';
+        const CLOUD_CONFIG_KEY = 'cartelera_firebase_cfg_v1';
 
         const INITIAL_SEED_TASKS = [
+            // Proyecto PDVSA GAS
             {
-                id: 't-101',
+                id: 'seed-1',
                 project: 'Proyecto PDVSA GAS',
-                title: 'ODS 1 - Partida 2: Desarrollo de software y capa de comunicación con SAP',
+                title: 'ODS 1: Infraestructura tecnológica — Partida 2: Desarrollo de software y capa de comunicación con SAP',
                 details: [],
                 completed: false,
-                createdAt: Date.now() - 10000
+                createdAt: 1710000001000
             },
             {
-                id: 't-102',
+                id: 'seed-2',
                 project: 'Proyecto PDVSA GAS',
-                title: 'ODS 1 - Partida 3: Campaña de fomento de cultura de pago',
+                title: 'ODS 1: Infraestructura tecnológica — Partida 3: Campaña de fomento de cultura de pago',
                 details: [],
                 completed: false,
-                createdAt: Date.now() - 9000
+                createdAt: 1710000002000
             },
             {
-                id: 't-103',
+                id: 'seed-3',
+                project: 'Proyecto PDVSA GAS',
+                title: 'ODS 2: Inspección y toma de lecturas Comerciales',
+                details: [],
+                completed: false,
+                createdAt: 1710000003000
+            },
+            {
+                id: 'seed-4',
+                project: 'Proyecto PDVSA GAS',
+                title: 'ODS 2: Inspección y toma de lecturas Industriales',
+                details: [],
+                completed: false,
+                createdAt: 1710000004000
+            },
+            {
+                id: 'seed-5',
                 project: 'Proyecto PDVSA GAS',
                 title: 'Estructura de costos ODSs: Definir estructura de costos de ODS 1, 2 y 3 (partida por partida)',
-                details: [
-                    'ODS 2: Inspección y toma de lecturas Comerciales e Industriales'
-                ],
+                details: [],
                 completed: false,
-                createdAt: Date.now() - 8000
+                createdAt: 1710000005000
             },
             {
-                id: 't-104',
+                id: 'seed-6',
                 project: 'Proyecto PDVSA GAS',
-                title: 'Definir requerimientos Sist. de trabajo de campo PDVSA GAS',
+                title: 'Software de PDVSA GAS: Definir requerimientos Sist. de trabajo de campo PDVSA GAS',
                 details: [
                     'Captura de geolocalización al momento de capturar foto de lectura',
                     'Validar geolocalización de foto contra la del cliente',
                     'Algoritmo de construcción de ruta óptima',
-                    'Faltan reportes y dashboard de gestión comercial'
+                    'Faltan reportes y dashboard de gestión comercial',
+                    'Sw de Ops y Logística: Revisión Anexo A - SIHO y Anexo A - GA'
                 ],
                 completed: false,
-                createdAt: Date.now() - 7000
+                createdAt: 1710000006000
             },
+            // SSST (SIHO + GA)
             {
-                id: 't-201',
+                id: 'seed-7',
                 project: 'SSST (SIHO + GA)',
                 title: 'SIHO y GA (Anexo B): Enviar Organigrama a Wendy',
                 details: [],
                 completed: false,
-                createdAt: Date.now() - 6000
+                createdAt: 1710000007000
             },
+            // CALL CENTER (CORPOELEC + CRIXTO)
             {
-                id: 't-202',
-                project: 'SSST (SIHO + GA)',
-                title: 'Sw de Ops y Logística: Revisión Anexo A - SIHO',
-                details: [],
-                completed: false,
-                createdAt: Date.now() - 5000
-            },
-            {
-                id: 't-203',
-                project: 'SSST (SIHO + GA)',
-                title: 'Sw de Ops y Logística: Revisión Anexo A - GA',
-                details: [],
-                completed: false,
-                createdAt: Date.now() - 4000
-            },
-            {
-                id: 't-301',
+                id: 'seed-8',
                 project: 'CALL CENTER (CORPOELEC + CRIXTO)',
                 title: 'Solicitar instalación impresora a color para Fanny',
                 details: [],
                 completed: false,
-                createdAt: Date.now() - 3000
+                createdAt: 1710000008000
             },
+            // Pausas Activas
             {
-                id: 't-401',
+                id: 'seed-9',
                 project: 'Pausas Activas',
                 title: 'Crear proyecto de desarrollo de App',
                 details: [],
                 completed: false,
-                createdAt: Date.now() - 2500
+                createdAt: 1710000009000
             },
             {
-                id: 't-402',
+                id: 'seed-10',
                 project: 'Pausas Activas',
                 title: 'Conceptualizar requerimiento',
                 details: [],
                 completed: false,
-                createdAt: Date.now() - 2000
+                createdAt: 1710000010000
             },
+            // TITAN
             {
-                id: 't-501',
+                id: 'seed-11',
                 project: 'TITAN',
                 title: 'Uso y entrenamiento del LLM local para requerimiento de Disglobal',
                 details: [],
                 completed: false,
-                createdAt: Date.now() - 1500
+                createdAt: 1710000011000
             },
+            // Proyecto VENTURIA
             {
-                id: 't-601',
+                id: 'seed-12',
                 project: 'Proyecto VENTURIA',
                 title: 'QA del motor de Richard con simulaciones múltiples',
                 details: [],
                 completed: false,
-                createdAt: Date.now() - 1000
+                createdAt: 1710000012000
             }
         ];
 
@@ -460,48 +478,274 @@
         let tasks = [];
         let currentFilter = 'all'; // 'all' | 'pending' | 'completed'
         let searchQuery = '';
+        let activeModalProject = '';
+
+        // Estado de sincronización en la nube (Firebase RTDB)
+        let cloudState = {
+            enabled: false,
+            app: null,
+            db: null,
+            dbRef: null,
+            config: null,
+            room: 'cartelera-principal',
+            isFirstRemoteLoad: true
+        };
 
         // Paleta de acentos sutiles para distinguir tarjetas de proyectos sin saturar
         const PROJECT_ACCENTS = [
-            { border: 'border-t-indigo-500', badge: 'bg-indigo-50 text-indigo-700', bar: 'bg-indigo-600' },
-            { border: 'border-t-sky-500', badge: 'bg-sky-50 text-sky-700', bar: 'bg-sky-600' },
-            { border: 'border-t-emerald-500', badge: 'bg-emerald-50 text-emerald-700', bar: 'bg-emerald-600' },
-            { border: 'border-t-amber-500', badge: 'bg-amber-50 text-amber-700', bar: 'bg-amber-500' },
-            { border: 'border-t-violet-500', badge: 'bg-violet-50 text-violet-700', bar: 'bg-violet-600' },
-            { border: 'border-t-rose-500', badge: 'bg-rose-50 text-rose-700', bar: 'bg-rose-600' },
+            { border: 'border-t-indigo-500', badge: 'bg-indigo-50 text-indigo-700', dot: 'bg-indigo-500' },
+            { border: 'border-t-sky-500', badge: 'bg-sky-50 text-sky-700', dot: 'bg-sky-500' },
+            { border: 'border-t-emerald-500', badge: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' },
+            { border: 'border-t-amber-500', badge: 'bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
+            { border: 'border-t-violet-500', badge: 'bg-violet-50 text-violet-700', dot: 'bg-violet-500' },
+            { border: 'border-t-rose-500', badge: 'bg-rose-50 text-rose-700', dot: 'bg-rose-500' },
+            { border: 'border-t-teal-500', badge: 'bg-teal-50 text-teal-700', dot: 'bg-teal-500' }
         ];
 
         // =========================================================================
-        // INICIALIZACIÓN Y PERSISTENCIA (localStorage)
+        // INICIALIZACIÓN, PERSISTENCIA LOCAL Y SINCRONIZACIÓN FIREBASE RTDB
         // =========================================================================
         function initApp() {
+            // 1. Verificar si venimos desde un enlace mágico (#cfg=...) para autoconfigurar otro dispositivo
+            checkMagicLinkHash();
+
+            // 2. Cargar respaldo local inmediatamente para renderizado instantáneo
+            loadLocalTasks();
+            renderDashboard();
+
+            // 3. Intentar conectar a Firebase si existe configuración guardada
+            const savedCloud = getSavedCloudConfig();
+            if (savedCloud && savedCloud.config) {
+                if (window.FirebaseRTDB) {
+                    connectToFirebase(savedCloud.config, savedCloud.room || 'cartelera-principal');
+                } else {
+                    window.addEventListener('firebase-sdk-ready', () => {
+                        connectToFirebase(savedCloud.config, savedCloud.room || 'cartelera-principal');
+                    }, { once: true });
+                }
+            } else {
+                updateSyncStatus('local');
+            }
+        }
+
+        function cloneSeedTasks() {
+            return JSON.parse(JSON.stringify(INITIAL_SEED_TASKS));
+        }
+
+        function loadLocalTasks() {
             try {
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (saved !== null) {
                     tasks = JSON.parse(saved);
                 } else {
-                    // Primera carga: precargar datos iniciales de la cartelera
-                    tasks = structuredClone(INITIAL_SEED_TASKS);
-                    saveTasks();
+                    tasks = cloneSeedTasks();
+                    saveLocalTasksOnly();
                 }
             } catch (e) {
                 console.error('Error leyendo localStorage:', e);
-                tasks = structuredClone(INITIAL_SEED_TASKS);
+                tasks = cloneSeedTasks();
             }
-            renderDashboard();
         }
 
-        function saveTasks() {
+        function saveLocalTasksOnly() {
             try {
-                // Solo persisten las tareas activas ('pendientes' y 'completadas')
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
             } catch (e) {
                 console.error('Error guardando en localStorage:', e);
-                showToast('No se pudo guardar en almacenamiento local');
             }
         }
 
-        // Genera un índice de color consistente basado en el nombre del proyecto
+        // Guarda las tareas en local y, si Firebase está activo, sincroniza en la nube en tiempo real
+        function saveTasks() {
+            saveLocalTasksOnly();
+
+            if (cloudState.enabled && cloudState.dbRef && window.FirebaseRTDB) {
+                try {
+                    const payload = tasks.map(t => ({
+                        id: t.id,
+                        project: t.project.trim(),
+                        title: t.title.trim(),
+                        details: Array.isArray(t.details) ? t.details : [],
+                        completed: Boolean(t.completed),
+                        createdAt: t.createdAt || Date.now()
+                    }));
+
+                    window.FirebaseRTDB.set(cloudState.dbRef, payload)
+                        .catch(err => {
+                            console.error('Error escribiendo en Firebase:', err);
+                            updateSyncStatus('error', 'Error al guardar en nube');
+                            showToast('Error de permisos o red al sincronizar con Firebase');
+                        });
+                } catch (err) {
+                    console.error('Error preparando datos para Firebase:', err);
+                }
+            }
+        }
+
+        // Conectar y suscribirse en tiempo real a Firebase Realtime Database
+        async function connectToFirebase(config, roomName = 'cartelera-principal') {
+            if (!window.FirebaseRTDB) {
+                showToast('Cargando motor de nube, intenta en un segundo...');
+                return;
+            }
+
+            const cleanRoom = (roomName || 'cartelera-principal')
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9_-]/g, '-') || 'cartelera-principal';
+
+            updateSyncStatus('connecting', cleanRoom);
+
+            try {
+                if (cloudState.dbRef) {
+                    window.FirebaseRTDB.off(cloudState.dbRef);
+                }
+                if (cloudState.app) {
+                    await window.FirebaseRTDB.deleteApp(cloudState.app).catch(() => {});
+                }
+
+                const appInstance = window.FirebaseRTDB.initializeApp(config, 'cartelera-' + Date.now());
+                const dbInstance = window.FirebaseRTDB.getDatabase(appInstance);
+                const targetRef = window.FirebaseRTDB.ref(dbInstance, `carteleras/${cleanRoom}/tasks`);
+
+                cloudState.app = appInstance;
+                cloudState.db = dbInstance;
+                cloudState.dbRef = targetRef;
+                cloudState.config = config;
+                cloudState.room = cleanRoom;
+                cloudState.enabled = true;
+                cloudState.isFirstRemoteLoad = true;
+
+                localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify({ config, room: cleanRoom }));
+
+                window.FirebaseRTDB.onValue(targetRef, (snapshot) => {
+                    updateSyncStatus('synced', cleanRoom);
+                    const val = snapshot.val();
+
+                    if (val === null) {
+                        if (cloudState.isFirstRemoteLoad && tasks.length > 0) {
+                            cloudState.isFirstRemoteLoad = false;
+                            saveTasks();
+                            return;
+                        }
+                        tasks = [];
+                    } else {
+                        const rawList = Array.isArray(val) ? val : Object.values(val);
+                        tasks = rawList
+                            .filter(item => item && typeof item.project === 'string' && typeof item.title === 'string')
+                            .map(item => ({
+                                id: item.id || 'task-' + Date.now(),
+                                project: item.project.trim(),
+                                title: item.title.trim(),
+                                details: Array.isArray(item.details) ? item.details : [],
+                                completed: Boolean(item.completed),
+                                createdAt: item.createdAt || Date.now()
+                            }));
+                    }
+
+                    cloudState.isFirstRemoteLoad = false;
+                    saveLocalTasksOnly();
+                    renderDashboard();
+                }, (error) => {
+                    console.error('Error en listener de Firebase:', error);
+                    updateSyncStatus('error', cleanRoom);
+                    showToast('No se pudo conectar a Firebase. Revisa las reglas o la URL.');
+                });
+
+            } catch (err) {
+                console.error('Fallo inicializando Firebase:', err);
+                cloudState.enabled = false;
+                updateSyncStatus('error');
+                showToast('Configuración de Firebase inválida');
+            }
+        }
+
+        function disconnectCloud() {
+            if (cloudState.dbRef && window.FirebaseRTDB) {
+                window.FirebaseRTDB.off(cloudState.dbRef);
+            }
+            if (cloudState.app && window.FirebaseRTDB) {
+                window.FirebaseRTDB.deleteApp(cloudState.app).catch(() => {});
+            }
+            cloudState = {
+                enabled: false,
+                app: null,
+                db: null,
+                dbRef: null,
+                config: null,
+                room: 'cartelera-principal',
+                isFirstRemoteLoad: true
+            };
+            localStorage.removeItem(CLOUD_CONFIG_KEY);
+            updateSyncStatus('local');
+            closeCloudModal();
+            showToast('Desconectado de la nube. Trabajando en Modo Local.');
+        }
+
+        function updateSyncStatus(status, room = '') {
+            const badge = document.getElementById('sync-badge');
+            const dot = document.getElementById('sync-dot');
+            const label = document.getElementById('sync-label');
+            const subtitle = document.getElementById('room-subtitle');
+            const cloudBtn = document.getElementById('cloud-config-btn');
+
+            if (status === 'synced') {
+                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 transition-colors';
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+                label.textContent = 'En vivo';
+                subtitle.textContent = room ? `· Sala: ${room}` : '';
+                cloudBtn.classList.remove('bg-slate-800', 'hover:bg-slate-900');
+                cloudBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+            } else if (status === 'connecting') {
+                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 transition-colors';
+                dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-ping';
+                label.textContent = 'Conectando...';
+                subtitle.textContent = '';
+            } else if (status === 'error') {
+                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 transition-colors';
+                dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+                label.textContent = 'Error Nube';
+                subtitle.textContent = '';
+            } else {
+                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200/80 transition-colors';
+                dot.className = 'w-2 h-2 rounded-full bg-slate-400';
+                label.textContent = 'Modo Local';
+                subtitle.textContent = '';
+                cloudBtn.classList.add('bg-slate-800', 'hover:bg-slate-900');
+                cloudBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+            }
+        }
+
+        function getSavedCloudConfig() {
+            try {
+                const raw = localStorage.getItem(CLOUD_CONFIG_KEY);
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function checkMagicLinkHash() {
+            try {
+                const hash = window.location.hash;
+                if (hash && hash.startsWith('#cfg=')) {
+                    const encoded = decodeURIComponent(hash.substring(5));
+                    const decodedJson = decodeURIComponent(escape(atob(encoded)));
+                    const parsed = JSON.parse(decodedJson);
+                    if (parsed && parsed.config && parsed.config.databaseURL) {
+                        localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify({
+                            config: parsed.config,
+                            room: parsed.room || 'cartelera-principal'
+                        }));
+                        history.replaceState(null, '', window.location.pathname + window.location.search);
+                        showToast('¡Configuración de nube aplicada desde el enlace!');
+                    }
+                }
+            } catch (e) {
+                console.warn('No se pudo procesar enlace de configuración:', e);
+            }
+        }
+
         function getProjectAccent(projectName) {
             let hash = 0;
             for (let i = 0; i < projectName.length; i++) {
@@ -511,376 +755,272 @@
         }
 
         // =========================================================================
-        // LÓGICA DE AGRUPACIÓN Y RENDERIZADO
+        // OPERACIONES CRUD SOBRE TAREAS (SIN PERSISTIR PROYECTOS VACÍOS)
         // =========================================================================
-        function renderDashboard() {
-            updateKPIs();
-            updateProjectDatalist();
+        function handleAddTask(event) {
+            event.preventDefault();
+            const projectInput = document.getElementById('input-project');
+            const titleInput = document.getElementById('input-title');
 
-            const board = document.getElementById('projects-board');
-            const emptyState = document.getElementById('empty-state');
-            const query = searchQuery.trim().toLowerCase();
+            const project = projectInput.value.trim();
+            const title = titleInput.value.trim();
 
-            // 1. Agrupar todas las tareas existentes por proyecto
-            // REGLA ESTRICTA: Un proyecto solo existe si tiene al menos 1 tarea en `tasks`
-            const projectsMap = new Map();
+            if (!project || !title) return;
 
-            tasks.forEach(task => {
-                const projName = task.project.trim();
-                if (!projectsMap.has(projName)) {
-                    projectsMap.set(projName, []);
-                }
-                projectsMap.get(projName).push(task);
-            });
-
-            // 2. Filtrar proyectos y tareas según búsqueda y estado seleccionado
-            const visibleProjects = [];
-
-            projectsMap.forEach((projectTasks, projectName) => {
-                const totalInProject = projectTasks.length;
-                const completedInProject = projectTasks.filter(t => t.completed).length;
-                const pendingInProject = totalInProject - completedInProject;
-
-                // Filtrar tareas individuales dentro del proyecto
-                const filteredTasks = projectTasks.filter(task => {
-                    // Filtro por estado
-                    if (currentFilter === 'pending' && task.completed) return false;
-                    if (currentFilter === 'completed' && !task.completed) return false;
-
-                    // Filtro por texto (busca en nombre de proyecto, título de tarea o detalles)
-                    if (query) {
-                        const matchProj = projectName.toLowerCase().includes(query);
-                        const matchTitle = task.title.toLowerCase().includes(query);
-                        const matchDetails = (task.details || []).some(d => d.toLowerCase().includes(query));
-                        return matchProj || matchTitle || matchDetails;
-                    }
-                    return true;
-                });
-
-                // Solo mostramos la tarjeta si tiene tareas que coincidan con el filtro actual
-                if (filteredTasks.length > 0) {
-                    visibleProjects.push({
-                        name: projectName,
-                        tasks: filteredTasks,
-                        totalCount: totalInProject,
-                        completedCount: completedInProject,
-                        pendingCount: pendingInProject
-                    });
-                }
-            });
-
-            // 3. Renderizar HTML
-            board.innerHTML = '';
-
-            if (visibleProjects.length === 0) {
-                board.classList.add('hidden');
-                emptyState.classList.remove('hidden');
-                
-                const isFiltering = query !== '' || currentFilter !== 'all';
-                document.getElementById('empty-title').textContent = isFiltering 
-                    ? 'Sin coincidencias para este filtro' 
-                    : 'No hay proyectos activos en pantalla';
-                document.getElementById('empty-desc').textContent = isFiltering
-                    ? 'Intenta con otro término de búsqueda o cambia el filtro de estado.'
-                    : 'Todos los proyectos sin tareas se ocultan automáticamente. Agrega una actividad arriba para comenzar.';
-                
-                const resetBtn = document.getElementById('empty-reset-btn');
-                if (isFiltering) {
-                    resetBtn.classList.remove('hidden');
-                } else {
-                    resetBtn.classList.add('hidden');
-                }
-            } else {
-                board.classList.remove('hidden');
-                emptyState.classList.add('hidden');
-
-                visibleProjects.forEach(proj => {
-                    const accent = getProjectAccent(proj.name);
-                    const progressPct = proj.totalCount > 0 
-                        ? Math.round((proj.completedCount / proj.totalCount) * 100) 
-                        : 0;
-
-                    const card = document.createElement('section');
-                    card.className = `project-card bg-white rounded-2xl border border-slate-200/90 border-t-4 ${accent.border} shadow-xs hover:shadow-md flex flex-col overflow-hidden animate-entry`;
-
-                    // Construir lista de tareas HTML
-                    const tasksHtml = proj.tasks.map(task => {
-                        const hasDetails = task.details && task.details.length > 0;
-                        const detailsHtml = hasDetails ? `
-                            <ul class="mt-2 pl-3.5 border-l-2 border-slate-200 space-y-1">
-                                ${task.details.map(detail => `
-                                    <li class="text-xs text-slate-500 leading-relaxed flex items-start gap-1.5">
-                                        <span class="text-indigo-400 mt-1 text-[8px]">●</span>
-                                        <span class="${task.completed ? 'line-through opacity-70' : ''}">${escapeHTML(detail)}</span>
-                                    </li>
-                                `).join('')}
-                            </ul>
-                        ` : '';
-
-                        return `
-                            <div class="task-item group p-3 rounded-xl border ${task.completed ? 'bg-slate-50/70 border-slate-100' : 'bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50/40'} flex items-start gap-3">
-                                <!-- Checkbox -->
-                                <div class="pt-0.5 shrink-0">
-                                    <input 
-                                        type="checkbox" 
-                                        ${task.completed ? 'checked' : ''} 
-                                        onchange="toggleTaskComplete('${task.id}')"
-                                        aria-label="Marcar como realizada"
-                                        class="custom-checkbox w-4 h-4 rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/30 cursor-pointer transition-colors"
-                                    >
-                                </div>
-
-                                <!-- Contenido de la Tarea -->
-                                <div class="flex-1 min-w-0 cursor-pointer" onclick="toggleTaskComplete('${task.id}')">
-                                    <p class="text-sm font-medium leading-snug break-words transition-all ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}">
-                                        ${escapeHTML(task.title)}
-                                    </p>
-                                    ${detailsHtml}
-                                </div>
-
-                                <!-- Botón Eliminar Definitivamente -->
-                                <button 
-                                    type="button"
-                                    onclick="deleteTask('${task.id}')"
-                                    title="Eliminar tarea definitivamente"
-                                    class="shrink-0 p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-all cursor-pointer"
-                                >
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        `;
-                    }).join('');
-
-                    card.innerHTML = `
-                        <!-- Encabezado de la Tarjeta de Proyecto -->
-                        <div class="p-4 pb-3 border-b border-slate-100">
-                            <div class="flex items-start justify-between gap-2">
-                                <h2 class="text-sm font-bold text-slate-900 tracking-tight leading-snug">
-                                    ${escapeHTML(proj.name)}
-                                </h2>
-                                <button 
-                                    type="button"
-                                    onclick="openProjectModal('${escapeAttr(proj.name)}')"
-                                    title="Agregar tarea a ${escapeAttr(proj.name)}"
-                                    class="shrink-0 p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
-                                >
-                                    <i data-lucide="plus" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-
-                            <!-- Contadores y Progreso -->
-                            <div class="mt-2.5 flex items-center justify-between text-xs">
-                                <div class="flex items-center gap-2">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${accent.badge}">
-                                        ${proj.pendingCount} ${proj.pendingCount === 1 ? 'pendiente' : 'pendientes'}
-                                    </span>
-                                    ${proj.completedCount > 0 ? `
-                                        <span class="text-slate-400 font-medium">
-                                            · ${proj.completedCount} ${proj.completedCount === 1 ? 'lista' : 'listas'}
-                                        </span>
-                                    ` : ''}
-                                </div>
-                                <span class="text-[11px] font-semibold text-slate-400">${progressPct}%</span>
-                            </div>
-
-                            <!-- Barra de progreso sutil -->
-                            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-2">
-                                <div class="h-full ${accent.bar} transition-all duration-300 rounded-full" style="width: ${progressPct}%"></div>
-                            </div>
-                        </div>
-
-                        <!-- Cuerpo de Tareas del Proyecto -->
-                        <div class="p-3 space-y-2 bg-slate-50/30 flex-1">
-                            ${tasksHtml}
-                        </div>
-                    `;
-
-                    board.appendChild(card);
-                });
-            }
-
-            // Re-inicializar iconos Lucide en el DOM recién creado
-            lucide.createIcons();
+            addTaskToStore(project, title, []);
+            titleInput.value = '';
+            titleInput.focus();
+            showToast(`Tarea agregada a "${project}"`);
         }
 
-        function updateKPIs() {
-            // Proyectos activos: proyectos únicos con al menos 1 tarea en memoria
-            const activeProjectsSet = new Set(tasks.map(t => t.project.trim()));
-            const totalCompleted = tasks.filter(t => t.completed).length;
-            const totalPending = tasks.length - totalCompleted;
-
-            document.getElementById('kpi-projects').textContent = activeProjectsSet.size;
-            document.getElementById('kpi-pending').textContent = totalPending;
-            document.getElementById('kpi-completed').textContent = totalCompleted;
-        }
-
-        function updateProjectDatalist() {
-            const datalist = document.getElementById('projects-datalist');
-            const activeProjects = Array.from(new Set(tasks.map(t => t.project.trim()))).sort();
-            datalist.innerHTML = activeProjects
-                .map(p => `<option value="${escapeAttr(p)}">`)
-                .join('');
-        }
-
-        // =========================================================================
-        // ACCIONES DE GESTIÓN DE TAREAS (CRUD)
-        // =========================================================================
-        function addTask(project, title, rawDetails = '') {
-            const cleanProject = project.trim();
-            const cleanTitle = title.trim();
-            if (!cleanProject || !cleanTitle) return;
-
-            // Convertir líneas no vacías en arreglo de detalles/subtareas
-            const detailsArray = rawDetails
-                .split('\n')
-                .map(line => line.replace(/^[-•*]\s*/, '').trim())
-                .filter(line => line.length > 0);
-
+        function addTaskToStore(project, title, details = []) {
             const newTask = {
                 id: 'task-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-                project: cleanProject,
-                title: cleanTitle,
-                details: detailsArray,
+                project: project.trim(),
+                title: title.trim(),
+                details: details,
                 completed: false,
                 createdAt: Date.now()
             };
-
-            tasks.unshift(newTask);
+            tasks.push(newTask);
             saveTasks();
             renderDashboard();
-            showToast(`Actividad agregada a "${cleanProject}"`);
         }
 
         function toggleTaskComplete(taskId) {
-            const task = tasks.find(t => t.id === taskId);
-            if (!task) return;
-            task.completed = !task.completed;
+            const target = tasks.find(t => t.id === taskId);
+            if (!target) return;
+            target.completed = !target.completed;
             saveTasks();
             renderDashboard();
         }
 
         function deleteTask(taskId) {
-            const index = tasks.findIndex(t => t.id === taskId);
-            if (index === -1) return;
+            const target = tasks.find(t => t.id === taskId);
+            if (!target) return;
+            const projectName = target.project;
 
-            const deletedTask = tasks[index];
-            // Eliminación definitiva de memoria y localStorage
-            tasks.splice(index, 1);
+            // Eliminar definitivamente del arreglo (no se guarda historial de eliminadas)
+            tasks = tasks.filter(t => t.id !== taskId);
             saveTasks();
             renderDashboard();
 
-            // Verificar si el proyecto quedó sin tareas para notificar su ocultamiento automático
-            const remainingInProject = tasks.some(t => t.project.trim() === deletedTask.project.trim());
-            if (!remainingInProject) {
-                showToast(`Tarea eliminada. Proyecto "${deletedTask.project}" ocultado por no tener pendientes.`);
+            // Comprobar si el proyecto quedó sin tareas y desapareció del tablero
+            const remainingInProject = tasks.filter(t => t.project.toLowerCase() === projectName.toLowerCase()).length;
+            if (remainingInProject === 0) {
+                showToast(`Tarea eliminada. Proyecto "${projectName}" ocultado por no tener tareas.`);
             } else {
-                showToast('Tarea eliminada definitivamente');
+                showToast('Tarea eliminada del tablero');
             }
         }
 
         // =========================================================================
-        // MANEJADORES DE FORMULARIOS, FILTROS Y MODALES
+        // FILTROS Y BÚSQUEDA
         // =========================================================================
-        function handleQuickAdd(event) {
-            event.preventDefault();
-            const projectInput = document.getElementById('input-project');
-            const taskInput = document.getElementById('input-task');
-            const detailsInput = document.getElementById('input-details');
-
-            addTask(projectInput.value, taskInput.value, detailsInput.value);
-
-            // Limpiar campos de tarea manteniendo o limpiando proyecto según comodidad
-            taskInput.value = '';
-            detailsInput.value = '';
-            taskInput.focus();
+        function setFilter(filter) {
+            currentFilter = filter;
+            ['all', 'pending', 'completed'].forEach(key => {
+                const btn = document.getElementById(`filter-${key}`);
+                if (!btn) return;
+                if (key === filter) {
+                    btn.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-slate-900 shadow-2xs transition-all cursor-pointer';
+                } else {
+                    btn.className = 'px-3 py-1.5 text-xs font-medium rounded-lg text-slate-600 hover:text-slate-900 transition-all cursor-pointer';
+                }
+            });
+            renderDashboard();
         }
 
-        function toggleDetailsInput() {
-            const container = document.getElementById('details-container');
-            const textSpan = document.getElementById('toggle-details-text');
-            const isHidden = container.classList.contains('hidden');
-            
-            if (isHidden) {
-                container.classList.remove('hidden');
-                textSpan.textContent = '− Ocultar notas';
-                document.getElementById('input-details').focus();
-            } else {
-                container.classList.add('hidden');
-                textSpan.textContent = '+ Añadir notas / subtareas';
-            }
+        function handleSearch(value) {
+            searchQuery = value.trim().toLowerCase();
+            renderDashboard();
         }
 
-        function setStatusFilter(status) {
-            currentFilter = status;
-            
-            // Actualizar estilos de botones
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('bg-white', 'text-indigo-600', 'shadow-xs', 'font-semibold');
-                btn.classList.add('text-slate-600', 'font-medium');
+        // =========================================================================
+        // RENDERIZADO DEL TABLERO Y PROYECTOS ACTIVOS
+        // =========================================================================
+        function renderDashboard() {
+            const boardContainer = document.getElementById('board-container');
+            const emptyState = document.getElementById('empty-state');
+            const datalist = document.getElementById('projects-datalist');
+
+            // 1. Agrupar todas las tareas existentes por proyecto (solo proyectos con >= 1 tarea)
+            const allProjectsMap = new Map();
+            tasks.forEach(task => {
+                const key = task.project.trim();
+                if (!allProjectsMap.has(key)) {
+                    allProjectsMap.set(key, []);
+                }
+                allProjectsMap.get(key).push(task);
             });
 
-            const activeBtn = document.getElementById(`filter-${status}`);
-            activeBtn.classList.remove('text-slate-600', 'font-medium');
-            activeBtn.classList.add('bg-white', 'text-indigo-600', 'shadow-xs', 'font-semibold');
+            // Actualizar datalist de proyectos activos para autocompletado rápido
+            datalist.innerHTML = Array.from(allProjectsMap.keys())
+                .map(proj => `<option value="${escapeHtml(proj)}">`)
+                .join('');
 
-            renderDashboard();
-        }
+            // 2. Actualizar métricas globales
+            const totalActiveProjects = allProjectsMap.size;
+            const totalPending = tasks.filter(t => !t.completed).length;
+            const totalCompleted = tasks.filter(t => t.completed).length;
 
-        function handleFilterChange() {
-            const input = document.getElementById('search-input');
-            const clearBtn = document.getElementById('clear-search-btn');
-            searchQuery = input.value;
-            
-            if (searchQuery.length > 0) {
-                clearBtn.classList.remove('hidden');
+            document.getElementById('stat-projects').textContent = totalActiveProjects;
+            document.getElementById('stat-pending').textContent = totalPending;
+            document.getElementById('stat-completed').textContent = totalCompleted;
+
+            // 3. Aplicar filtros de vista y búsqueda sin alterar la regla de proyectos activos
+            const visibleProjects = [];
+            allProjectsMap.forEach((projectTasks, projectName) => {
+                const filteredTasks = projectTasks.filter(t => {
+                    const matchesStatus =
+                        currentFilter === 'all' ||
+                        (currentFilter === 'pending' && !t.completed) ||
+                        (currentFilter === 'completed' && t.completed);
+
+                    const matchesSearch =
+                        !searchQuery ||
+                        projectName.toLowerCase().includes(searchQuery) ||
+                        t.title.toLowerCase().includes(searchQuery) ||
+                        (t.details && t.details.some(d => d.toLowerCase().includes(searchQuery)));
+
+                    return matchesStatus && matchesSearch;
+                });
+
+                // Solo mostrar proyectos que tengan al menos una tarea visible
+                if (filteredTasks.length > 0) {
+                    visibleProjects.push({
+                        name: projectName,
+                        allTasksCount: projectTasks.length,
+                        completedCount: projectTasks.filter(t => t.completed).length,
+                        tasks: filteredTasks
+                    });
+                }
+            });
+
+            // 4. Mostrar estado vacío o renderizar tarjetas de proyectos
+            if (visibleProjects.length === 0) {
+                boardContainer.innerHTML = '';
+                emptyState.classList.remove('hidden');
             } else {
-                clearBtn.classList.add('hidden');
+                emptyState.classList.add('hidden');
+                boardContainer.innerHTML = visibleProjects.map(proj => renderProjectCard(proj)).join('');
             }
-            renderDashboard();
+
+            // Refrescar iconos de Lucide si está disponible
+            if (window.lucide) {
+                lucide.createIcons();
+            }
         }
 
-        function clearSearch() {
-            document.getElementById('search-input').value = '';
-            handleFilterChange();
+        function renderProjectCard(proj) {
+            const accent = getProjectAccent(proj.name);
+            const progressPercent = Math.round((proj.completedCount / proj.allTasksCount) * 100);
+            const safeProjAttr = escapeHtml(proj.name).replace(/'/g, '&#39;');
+
+            // Ordenar: pendientes primero, completadas al final
+            const sortedTasks = [...proj.tasks].sort((a, b) => Number(a.completed) - Number(b.completed));
+
+            const tasksHtml = sortedTasks.map(task => {
+                const isDone = task.completed;
+                const detailsHtml = (task.details && task.details.length > 0)
+                    ? `<ul class="mt-2 pl-3 border-l-2 border-slate-200 space-y-1">
+                        ${task.details.map(d => `<li class="text-[11px] leading-snug ${isDone ? 'text-slate-400 line-through' : 'text-slate-500'}">• ${escapeHtml(d)}</li>`).join('')}
+                       </ul>`
+                    : '';
+
+                return `
+                    <div class="group flex items-start gap-2.5 p-2.5 rounded-xl border transition-all ${isDone ? 'bg-slate-50/80 border-slate-100' : 'bg-white border-slate-200/70 hover:border-indigo-200 hover:shadow-2xs'}">
+                        <button onclick="toggleTaskComplete('${task.id}')" title="${isDone ? 'Marcar como pendiente' : 'Marcar como realizada'}" class="mt-0.5 shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition-colors cursor-pointer ${isDone ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 hover:border-indigo-500 bg-white'}">
+                            ${isDone ? '<i data-lucide="check" class="w-3.5 h-3.5 stroke-[2.5]"></i>' : ''}
+                        </button>
+
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs sm:text-[13px] font-medium leading-snug break-words transition-colors ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}">
+                                ${escapeHtml(task.title)}
+                            </p>
+                            ${detailsHtml}
+                        </div>
+
+                        <button onclick="deleteTask('${task.id}')" title="Eliminar tarea del tablero" class="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 shrink-0 p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <article class="bg-white rounded-2xl border border-slate-200/90 border-t-4 ${accent.border} shadow-2xs flex flex-col overflow-hidden animate-entry">
+                    <!-- Cabecera del Proyecto -->
+                    <div class="p-4 pb-3 border-b border-slate-100">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="w-2.5 h-2.5 rounded-full shrink-0 ${accent.dot}"></span>
+                                <h2 class="text-sm font-bold text-slate-900 truncate" title="${escapeHtml(proj.name)}">
+                                    ${escapeHtml(proj.name)}
+                                </h2>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full ${accent.badge}">
+                                    ${proj.completedCount}/${proj.allTasksCount}
+                                </span>
+                                <button onclick="openProjectModal('${safeProjAttr}')" title="Agregar tarea a este proyecto" class="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
+                                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Barra de progreso del proyecto -->
+                        <div class="mt-2.5 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: ${progressPercent}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Tareas del Proyecto -->
+                    <div class="p-3.5 space-y-2 max-h-[420px] overflow-y-auto">
+                        ${tasksHtml}
+                    </div>
+                </article>
+            `;
         }
 
-        function resetFilters() {
-            clearSearch();
-            setStatusFilter('all');
-        }
-
-        // Modal rápido por proyecto
+        // =========================================================================
+        // MODALES (AGREGAR EN PROYECTO, RESPALDO JSON, NUBE FIREBASE, CONFIRMACIÓN)
+        // =========================================================================
         function openProjectModal(projectName) {
-            document.getElementById('modal-project-name').value = projectName;
-            document.getElementById('modal-project-title').textContent = projectName;
+            activeModalProject = projectName;
+            document.getElementById('modal-project-name').textContent = projectName;
             document.getElementById('modal-task-title').value = '';
             document.getElementById('modal-task-details').value = '';
-            
-            const modal = document.getElementById('project-modal');
+            const modal = document.getElementById('project-task-modal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             setTimeout(() => document.getElementById('modal-task-title').focus(), 50);
         }
 
         function closeProjectModal() {
-            const modal = document.getElementById('project-modal');
+            const modal = document.getElementById('project-task-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
 
-        function handleModalAdd(event) {
+        function handleAddTaskFromModal(event) {
             event.preventDefault();
-            const proj = document.getElementById('modal-project-name').value;
-            const title = document.getElementById('modal-task-title').value;
-            const details = document.getElementById('modal-task-details').value;
-            
-            addTask(proj, title, details);
+            const title = document.getElementById('modal-task-title').value.trim();
+            const rawDetails = document.getElementById('modal-task-details').value;
+            if (!activeModalProject || !title) return;
+
+            const details = rawDetails
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+
+            addTaskToStore(activeModalProject, title, details);
             closeProjectModal();
+            showToast(`Tarea añadida a "${activeModalProject}"`);
         }
 
-        // Modal de Respaldo JSON
         function openBackupModal() {
-            const textarea = document.getElementById('json-textarea');
+            const textarea = document.getElementById('json-backup-textarea');
             textarea.value = JSON.stringify(tasks, null, 2);
             const modal = document.getElementById('backup-modal');
             modal.classList.remove('hidden');
@@ -893,22 +1033,105 @@
             modal.classList.remove('flex');
         }
 
+        // Modal de Configuración Firebase RTDB
+        function openCloudModal() {
+            const saved = getSavedCloudConfig();
+            const roomInput = document.getElementById('cloud-room-name');
+            const rawInput = document.getElementById('cloud-config-raw');
+            const shareBox = document.getElementById('share-link-box');
+            const disconnectBtn = document.getElementById('disconnect-cloud-btn');
+
+            if (saved && saved.config) {
+                roomInput.value = saved.room || 'cartelera-principal';
+                rawInput.value = JSON.stringify(saved.config, null, 2);
+                disconnectBtn.classList.remove('hidden');
+
+                const payloadStr = JSON.stringify({ config: saved.config, room: saved.room || 'cartelera-principal' });
+                const b64 = btoa(unescape(encodeURIComponent(payloadStr)));
+                const baseUrl = window.location.href.split('#')[0];
+                document.getElementById('magic-link-input').value = `${baseUrl}#cfg=${encodeURIComponent(b64)}`;
+                shareBox.classList.remove('hidden');
+            } else {
+                roomInput.value = 'cartelera-principal';
+                rawInput.value = '';
+                shareBox.classList.add('hidden');
+                disconnectBtn.classList.add('hidden');
+            }
+
+            const modal = document.getElementById('cloud-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function closeCloudModal() {
+            const modal = document.getElementById('cloud-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function parseFirebaseConfigInput(rawText) {
+            const startIdx = rawText.indexOf('{');
+            const endIdx = rawText.lastIndexOf('}');
+            if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+                throw new Error('No se encontró un bloque de configuración válido { ... }');
+            }
+            const objStr = rawText.substring(startIdx + 1, endIdx);
+            const parsed = {};
+
+            // Extraer pares clave: "valor" de forma segura sin alterar URLs con https://
+            const pairRegex = /['"]?([a-zA-Z0-9_]+)['"]?\s*:\s*['"]([^'"]*)['"]/g;
+            let match;
+            while ((match = pairRegex.exec(objStr)) !== null) {
+                parsed[match[1]] = match[2];
+            }
+
+            if (!parsed.databaseURL && !parsed.projectId) {
+                throw new Error('Falta databaseURL o projectId en la configuración');
+            }
+            if (!parsed.databaseURL && parsed.projectId) {
+                parsed.databaseURL = `https://${parsed.projectId}-default-rtdb.firebaseio.com`;
+            }
+            return parsed;
+        }
+
+        function handleSaveCloudConfig(event) {
+            event.preventDefault();
+            const roomVal = document.getElementById('cloud-room-name').value;
+            const rawVal = document.getElementById('cloud-config-raw').value;
+
+            try {
+                const parsedConfig = parseFirebaseConfigInput(rawVal);
+                closeCloudModal();
+                connectToFirebase(parsedConfig, roomVal);
+                showToast('Conectando con Firebase Realtime Database...');
+            } catch (err) {
+                showToast('Error: ' + err.message);
+            }
+        }
+
+        function copyMagicLink() {
+            const input = document.getElementById('magic-link-input');
+            input.select();
+            document.execCommand('copy');
+            showToast('Enlace mágico copiado. Ábrelo en tu teléfono para sincronizar.');
+        }
+
         function copyJsonToClipboard() {
-            const textarea = document.getElementById('json-textarea');
+            const textarea = document.getElementById('json-backup-textarea');
             textarea.select();
             document.execCommand('copy');
             showToast('JSON copiado al portapapeles');
         }
 
         function importJsonData() {
-            const textarea = document.getElementById('json-textarea');
             try {
-                const parsed = JSON.parse(textarea.value);
+                const raw = document.getElementById('json-backup-textarea').value;
+                const parsed = JSON.parse(raw);
                 if (!Array.isArray(parsed)) {
                     throw new Error('Formato inválido');
                 }
-                // Validar estructura básica de las tareas importadas
-                const validTasks = parsed.filter(item => item && typeof item.project === 'string' && typeof item.title === 'string').map(item => ({
+                tasks = parsed.filter(item => item && typeof item.project === 'string' && typeof item.title === 'string').map(item => ({
                     id: item.id || 'task-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
                     project: item.project.trim(),
                     title: item.title.trim(),
@@ -916,18 +1139,15 @@
                     completed: Boolean(item.completed),
                     createdAt: item.createdAt || Date.now()
                 }));
-
-                tasks = validTasks;
                 saveTasks();
                 renderDashboard();
                 closeBackupModal();
-                showToast(`Se importaron ${validTasks.length} tareas correctamente`);
+                showToast('Tablero importado correctamente');
             } catch (e) {
                 showToast('Error: El texto ingresado no es un JSON válido');
             }
         }
 
-        // Modal de Restauración de Datos Iniciales
         function confirmResetData() {
             const modal = document.getElementById('confirm-modal');
             modal.classList.remove('hidden');
@@ -941,42 +1161,31 @@
         }
 
         function executeResetData() {
-            tasks = structuredClone(INITIAL_SEED_TASKS);
+            tasks = cloneSeedTasks();
             saveTasks();
-            resetFilters();
+            renderDashboard();
             closeConfirmModal();
-            showToast('Cartelera inicial restaurada');
+            showToast('Cartelera inicial cargada');
         }
 
         // =========================================================================
-        // UTILIDADES DE SEGURIDAD Y NOTIFICACIONES
+        // UTILIDADES UI
         // =========================================================================
-        function escapeHTML(str) {
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
-        function escapeAttr(str) {
-            return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        }
-
         let toastTimeout;
         function showToast(message) {
             const toast = document.getElementById('toast');
             document.getElementById('toast-message').textContent = message;
-            
             toast.classList.remove('translate-y-16', 'opacity-0');
-            toast.classList.add('translate-y-0', 'opacity-100');
-
             clearTimeout(toastTimeout);
             toastTimeout = setTimeout(() => {
                 toast.classList.add('translate-y-16', 'opacity-0');
-                toast.classList.remove('translate-y-0', 'opacity-100');
-            }, 3000);
+            }, 3200);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Cerrar modales con tecla Escape
@@ -985,11 +1194,16 @@
                 closeProjectModal();
                 closeBackupModal();
                 closeConfirmModal();
+                closeCloudModal();
             }
         });
 
-        // Arrancar aplicación al cargar el DOM
-        window.addEventListener('DOMContentLoaded', initApp);
+        // Arrancar aplicación de forma segura
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
     </script>
 </body>
 </html>
