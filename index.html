@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartelera de Pendientes — Dashboard Ejecutivo</title>
+    <!-- Tailwind CSS vía CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons para iconografía limpia y profesional -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        slate: {
+                            850: '#172033',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos personalizados mínimos para animaciones suaves y scrollbars */
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        
+        /* Transición suave para tarjetas y tareas */
+        .task-item {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .project-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            break-inside: avoid;
+        }
+
+        /* Checkbox personalizado */
+        .custom-checkbox:checked {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+        }
+
+        /* Animación de entrada */
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: translateY(6px) scale(0.99);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .animate-entry {
+            animation: fadeInScale 0.25s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-900">
+
+    <!-- Barra Superior de Navegación y Utilidades -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            <!-- Marca / Título -->
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-sm flex items-center justify-center">
+                    <i data-lucide="kanban" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-none">Cartelera de Pendientes</h1>
+                    <p class="text-xs text-slate-500 mt-0.5 hidden sm:block">Gestión operativa por proyectos activos</p>
+                </div>
+            </div>
+
+            <!-- Botones de Respaldo y Restauración -->
+            <div class="flex items-center gap-2">
+                <button onclick="openBackupModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer" title="Exportar o Importar datos en JSON">
+                    <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-slate-600"></i>
+                    <span class="hidden md:inline">Respaldo JSON</span>
+                </button>
+                <button onclick="confirmResetData()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/60 rounded-lg transition-colors cursor-pointer" title="Cargar los proyectos base de la cartelera">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline">Restaurar ejemplo</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Fila Superior: KPIs Compactos + Formulario Rápido de Nueva Tarea -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+            
+            <!-- Panel de KPIs Globales (4 columnas en desktop) -->
+            <div class="lg:col-span-4 grid grid-cols-3 gap-3">
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500">
+                        <span class="text-xs font-medium uppercase tracking-wider">Proyectos</span>
+                        <i data-lucide="folder-kanban" class="w-4 h-4 text-indigo-500"></i>
+                    </div>
+                    <div class="mt-2">
+                        <span id="kpi-projects" class="text-2xl sm:text-3xl font-bold text-slate-900">0</span>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Activos hoy</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500">
+                        <span class="text-xs font-medium uppercase tracking-wider">Pendientes</span>
+                        <i data-lucide="clock" class="w-4 h-4 text-amber-500"></i>
+                    </div>
+                    <div class="mt-2">
+                        <span id="kpi-pending" class="text-2xl sm:text-3xl font-bold text-amber-600">0</span>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Por ejecutar</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500">
+                        <span class="text-xs font-medium uppercase tracking-wider">Listas</span>
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+                    </div>
+                    <div class="mt-2">
+                        <span id="kpi-completed" class="text-2xl sm:text-3xl font-bold text-emerald-600">0</span>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Completadas</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulario de Creación Rápida (8 columnas en desktop) -->
+            <form id="quick-add-form" onsubmit="handleQuickAdd(event)" class="lg:col-span-8 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between gap-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-indigo-600 flex items-center gap-1.5">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        Nueva Actividad en Tablero
+                    </span>
+                    <button type="button" onclick="toggleDetailsInput()" id="toggle-details-btn" class="text-xs text-slate-500 hover:text-indigo-600 font-medium flex items-center gap-1 transition-colors cursor-pointer">
+                        <i data-lucide="list-plus" class="w-3.5 h-3.5"></i>
+                        <span id="toggle-details-text">+ Añadir notas / subtareas</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    <!-- Selector / Input de Proyecto con Autocompletado -->
+                    <div class="sm:col-span-4 relative">
+                        <label for="input-project" class="sr-only">Proyecto</label>
+                        <div class="relative">
+                            <i data-lucide="folder" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                            <input 
+                                type="text" 
+                                id="input-project" 
+                                list="projects-datalist" 
+                                required
+                                placeholder="Proyecto (ej. TITAN)" 
+                                autocomplete="off"
+                                class="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400 font-medium text-slate-800"
+                            >
+                            <datalist id="projects-datalist"></datalist>
+                        </div>
+                    </div>
+
+                    <!-- Descripción de la Tarea -->
+                    <div class="sm:col-span-6">
+                        <label for="input-task" class="sr-only">Descripción de la tarea</label>
+                        <input 
+                            type="text" 
+                            id="input-task" 
+                            required
+                            placeholder="¿Qué actividad se debe realizar?" 
+                            class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400 text-slate-800"
+                        >
+                    </div>
+
+                    <!-- Botón Agregar -->
+                    <div class="sm:col-span-2">
+                        <button type="submit" class="w-full h-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-medium rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Agregar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Campo Opcional para Subtareas / Detalles Técnicos -->
+                <div id="details-container" class="hidden pt-1">
+                    <textarea 
+                        id="input-details" 
+                        rows="2" 
+                        placeholder="Escribe notas técnicas o viñetas separadas por salto de línea (opcional)..."
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400 text-slate-700"
+                    ></textarea>
+                </div>
+            </form>
+        </div>
+
+        <!-- Barra de Filtros y Búsqueda -->
+        <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <!-- Buscador en tiempo real -->
+            <div class="relative flex-1 max-w-md">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    oninput="handleFilterChange()"
+                    placeholder="Buscar por proyecto, tarea o detalle técnico..." 
+                    class="w-full pl-10 pr-8 py-2 text-sm bg-slate-50 border border-slate-200/80 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                >
+                <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+
+            <!-- Pestañas de Filtro de Estado -->
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl self-start sm:self-auto" role="group">
+                <button onclick="setStatusFilter('all')" id="filter-all" class="filter-btn px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-600 shadow-xs cursor-pointer">
+                    Todas
+                </button>
+                <button onclick="setStatusFilter('pending')" id="filter-pending" class="filter-btn px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer">
+                    Pendientes
+                </button>
+                <button onclick="setStatusFilter('completed')" id="filter-completed" class="filter-btn px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all text-slate-600 hover:text-slate-900 cursor-pointer">
+                    Completadas
+                </button>
+            </div>
+        </div>
+
+        <!-- Tablero Principal de Proyectos Activos (Grid Responsivo) -->
+        <div id="projects-board" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
+            <!-- Las tarjetas de proyectos se renderizan dinámicamente aquí -->
+        </div>
+
+        <!-- Estado Vacío (Cuando no hay tareas o el filtro no arroja resultados) -->
+        <div id="empty-state" class="hidden bg-white border border-dashed border-slate-300 rounded-2xl p-12 text-center max-w-lg mx-auto my-8">
+            <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="clipboard-check" class="w-6 h-6"></i>
+            </div>
+            <h3 id="empty-title" class="text-base font-semibold text-slate-900">No hay proyectos activos en pantalla</h3>
+            <p id="empty-desc" class="text-sm text-slate-500 mt-1">Agrega una nueva tarea arriba para activar un proyecto o ajusta tus filtros de búsqueda.</p>
+            <button id="empty-reset-btn" onclick="resetFilters()" class="mt-4 hidden inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors cursor-pointer">
+                Limpiar filtros
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Modal para Agregar Tarea Rápida a un Proyecto Específico -->
+    <div id="project-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6 animate-entry">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-indigo-600">Agregar actividad a</span>
+                    <h3 id="modal-project-title" class="text-lg font-bold text-slate-900 leading-tight">Nombre del Proyecto</h3>
+                </div>
+                <button onclick="closeProjectModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="handleModalAdd(event)" class="space-y-4">
+                <input type="hidden" id="modal-project-name">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Descripción de la tarea *</label>
+                    <input type="text" id="modal-task-title" required placeholder="Ej. Revisar entregable final..." class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Notas técnicas o subtareas (una por línea)</label>
+                    <textarea id="modal-task-details" rows="3" placeholder="Detalle 1&#10;Detalle 2..." class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></textarea>
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeProjectModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors cursor-pointer">Guardar Tarea</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Respaldo JSON (Exportar / Importar) -->
+    <div id="backup-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 animate-entry">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="database" class="w-4 h-4 text-indigo-600"></i>
+                    Respaldo de Cartelera (JSON)
+                </h3>
+                <button onclick="closeBackupModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-500 mb-3">Copia este código para respaldar tus tareas activas o pega un respaldo previo para restaurarlo.</p>
+            
+            <textarea id="json-textarea" rows="7" class="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-700"></textarea>
+            
+            <div class="flex flex-wrap items-center justify-between gap-2 mt-4">
+                <button type="button" onclick="copyJsonToClipboard()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    Copiar JSON
+                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeBackupModal()" class="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">Cerrar</button>
+                    <button type="button" onclick="importJsonData()" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs cursor-pointer">
+                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                        Importar y Reemplazar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación Personalizado (Sin usar window.confirm) -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-sm w-full p-6 animate-entry">
+            <div class="flex items-center gap-3 text-amber-600 mb-2">
+                <div class="p-2 bg-amber-50 rounded-xl">
+                    <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-900">¿Restaurar datos iniciales?</h3>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed mb-5">
+                Esta acción reemplazará el tablero actual con los proyectos y pendientes base de la cartelera inicial.
+            </p>
+            <div class="flex items-center justify-end gap-2">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">Cancelar</button>
+                <button onclick="executeResetData()" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs cursor-pointer">Sí, restaurar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificación Toast Flotante -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-16 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-slate-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-lg flex items-center gap-2.5">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+            <span id="toast-message">Acción realizada</span>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // ESTADO Y DATOS INICIALES (Extraídos de la cartelera del usuario)
+        // =========================================================================
+        const STORAGE_KEY = 'cartelera_pendientes_v1';
+
+        const INITIAL_SEED_TASKS = [
+            {
+                id: 't-101',
+                project: 'Proyecto PDVSA GAS',
+                title: 'ODS 1 - Partida 2: Desarrollo de software y capa de comunicación con SAP',
+                details: [],
+                completed: false,
+                createdAt: Date.now() - 10000
+            },
+            {
+                id: 't-102',
+                project: 'Proyecto PDVSA GAS',
+                title: 'ODS 1 - Partida 3: Campaña de fomento de cultura de pago',
+                details: [],
+                completed: false,
+                createdAt: Date.now() - 9000
+            },
+            {
+                id: 't-103',
+                project: 'Proyecto PDVSA GAS',
+                title: 'Estructura de costos ODSs: Definir estructura de costos de ODS 1, 2 y 3 (partida por partida)',
+                details: [
+                    'ODS 2: Inspección y toma de lecturas Comerciales e Industriales'
+                ],
+                completed: false,
+                createdAt: Date.now() - 8000
+            },
+            {
+                id: 't-104',
+                project: 'Proyecto PDVSA GAS',
+                title: 'Definir requerimientos Sist. de trabajo de campo PDVSA GAS',
+                details: [
+                    'Captura de geolocalización al momento de capturar foto de lectura',
+                    'Validar geolocalización de foto contra la del cliente',
+                    'Algoritmo de construcción de ruta óptima',
+                    'Faltan reportes y dashboard de gestión comercial'
+                ],
+                completed: false,
+                createdAt: Date.now() - 7000
+            },
+            {
+                id: 't-201',
+                project: 'SSST (SIHO + GA)',
+                title: 'SIHO y GA (Anexo B): Enviar Organigrama a Wendy',
+                details: [],
+                completed: false,
+                createdAt: Date.now() - 6000
+            },
+            {
+                id: 't-202',
+                project: 'SSST (SIHO + GA)',
+                title: 'Sw de Ops y Logística: Revisión Anexo A - SIHO',
+                details: [],
+                completed: false,
+                createdAt: Date.now() - 5000
+            },
+            {
+                id: 't-203',
+                project: 'SSST (SIHO + GA)',
+                title: 'Sw de Ops y Logística: Revisión Anexo A - GA',
+                details: [],
+                completed: false,
+                createdAt: Date.now() - 4000
+            },
+            {
+                id: 't-301',
+                project: 'CALL CENTER (CORPOELEC + CRIXTO)',
+                title: 'Solicitar instalación impresora a color para Fanny',
+                details: [],
+                completed: false,
+                createdAt: Date.now() - 3000
+            },
+            {
+                id: 't-401',
+                project: 'Pausas Activas',
+                title: 'Crear proyecto de desarrollo de App',
+                details: [],
+                completed: false,
+                createdAt: Date.now() - 2500
+            },
+            {
+                id: 't-402',
+                project: 'Pausas Activas',
+                title: 'Conceptualizar requerimiento',
+                details: [],
+                completed: false,
+                createdAt: Date.now() - 2000
+            },
+            {
+                id: 't-501',
+                project: 'TITAN',
+                title: 'Uso y entrenamiento del LLM local para requerimiento de Disglobal',
+                details: [],
+                completed: false,
+                createdAt: Date.now() - 1500
+            },
+            {
+                id: 't-601',
+                project: 'Proyecto VENTURIA',
+                title: 'QA del motor de Richard con simulaciones múltiples',
+                details: [],
+                completed: false,
+                createdAt: Date.now() - 1000
+            }
+        ];
+
+        // Estado en memoria
+        let tasks = [];
+        let currentFilter = 'all'; // 'all' | 'pending' | 'completed'
+        let searchQuery = '';
+
+        // Paleta de acentos sutiles para distinguir tarjetas de proyectos sin saturar
+        const PROJECT_ACCENTS = [
+            { border: 'border-t-indigo-500', badge: 'bg-indigo-50 text-indigo-700', bar: 'bg-indigo-600' },
+            { border: 'border-t-sky-500', badge: 'bg-sky-50 text-sky-700', bar: 'bg-sky-600' },
+            { border: 'border-t-emerald-500', badge: 'bg-emerald-50 text-emerald-700', bar: 'bg-emerald-600' },
+            { border: 'border-t-amber-500', badge: 'bg-amber-50 text-amber-700', bar: 'bg-amber-500' },
+            { border: 'border-t-violet-500', badge: 'bg-violet-50 text-violet-700', bar: 'bg-violet-600' },
+            { border: 'border-t-rose-500', badge: 'bg-rose-50 text-rose-700', bar: 'bg-rose-600' },
+        ];
+
+        // =========================================================================
+        // INICIALIZACIÓN Y PERSISTENCIA (localStorage)
+        // =========================================================================
+        function initApp() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved !== null) {
+                    tasks = JSON.parse(saved);
+                } else {
+                    // Primera carga: precargar datos iniciales de la cartelera
+                    tasks = structuredClone(INITIAL_SEED_TASKS);
+                    saveTasks();
+                }
+            } catch (e) {
+                console.error('Error leyendo localStorage:', e);
+                tasks = structuredClone(INITIAL_SEED_TASKS);
+            }
+            renderDashboard();
+        }
+
+        function saveTasks() {
+            try {
+                // Solo persisten las tareas activas ('pendientes' y 'completadas')
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+            } catch (e) {
+                console.error('Error guardando en localStorage:', e);
+                showToast('No se pudo guardar en almacenamiento local');
+            }
+        }
+
+        // Genera un índice de color consistente basado en el nombre del proyecto
+        function getProjectAccent(projectName) {
+            let hash = 0;
+            for (let i = 0; i < projectName.length; i++) {
+                hash = projectName.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return PROJECT_ACCENTS[Math.abs(hash) % PROJECT_ACCENTS.length];
+        }
+
+        // =========================================================================
+        // LÓGICA DE AGRUPACIÓN Y RENDERIZADO
+        // =========================================================================
+        function renderDashboard() {
+            updateKPIs();
+            updateProjectDatalist();
+
+            const board = document.getElementById('projects-board');
+            const emptyState = document.getElementById('empty-state');
+            const query = searchQuery.trim().toLowerCase();
+
+            // 1. Agrupar todas las tareas existentes por proyecto
+            // REGLA ESTRICTA: Un proyecto solo existe si tiene al menos 1 tarea en `tasks`
+            const projectsMap = new Map();
+
+            tasks.forEach(task => {
+                const projName = task.project.trim();
+                if (!projectsMap.has(projName)) {
+                    projectsMap.set(projName, []);
+                }
+                projectsMap.get(projName).push(task);
+            });
+
+            // 2. Filtrar proyectos y tareas según búsqueda y estado seleccionado
+            const visibleProjects = [];
+
+            projectsMap.forEach((projectTasks, projectName) => {
+                const totalInProject = projectTasks.length;
+                const completedInProject = projectTasks.filter(t => t.completed).length;
+                const pendingInProject = totalInProject - completedInProject;
+
+                // Filtrar tareas individuales dentro del proyecto
+                const filteredTasks = projectTasks.filter(task => {
+                    // Filtro por estado
+                    if (currentFilter === 'pending' && task.completed) return false;
+                    if (currentFilter === 'completed' && !task.completed) return false;
+
+                    // Filtro por texto (busca en nombre de proyecto, título de tarea o detalles)
+                    if (query) {
+                        const matchProj = projectName.toLowerCase().includes(query);
+                        const matchTitle = task.title.toLowerCase().includes(query);
+                        const matchDetails = (task.details || []).some(d => d.toLowerCase().includes(query));
+                        return matchProj || matchTitle || matchDetails;
+                    }
+                    return true;
+                });
+
+                // Solo mostramos la tarjeta si tiene tareas que coincidan con el filtro actual
+                if (filteredTasks.length > 0) {
+                    visibleProjects.push({
+                        name: projectName,
+                        tasks: filteredTasks,
+                        totalCount: totalInProject,
+                        completedCount: completedInProject,
+                        pendingCount: pendingInProject
+                    });
+                }
+            });
+
+            // 3. Renderizar HTML
+            board.innerHTML = '';
+
+            if (visibleProjects.length === 0) {
+                board.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                
+                const isFiltering = query !== '' || currentFilter !== 'all';
+                document.getElementById('empty-title').textContent = isFiltering 
+                    ? 'Sin coincidencias para este filtro' 
+                    : 'No hay proyectos activos en pantalla';
+                document.getElementById('empty-desc').textContent = isFiltering
+                    ? 'Intenta con otro término de búsqueda o cambia el filtro de estado.'
+                    : 'Todos los proyectos sin tareas se ocultan automáticamente. Agrega una actividad arriba para comenzar.';
+                
+                const resetBtn = document.getElementById('empty-reset-btn');
+                if (isFiltering) {
+                    resetBtn.classList.remove('hidden');
+                } else {
+                    resetBtn.classList.add('hidden');
+                }
+            } else {
+                board.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+
+                visibleProjects.forEach(proj => {
+                    const accent = getProjectAccent(proj.name);
+                    const progressPct = proj.totalCount > 0 
+                        ? Math.round((proj.completedCount / proj.totalCount) * 100) 
+                        : 0;
+
+                    const card = document.createElement('section');
+                    card.className = `project-card bg-white rounded-2xl border border-slate-200/90 border-t-4 ${accent.border} shadow-xs hover:shadow-md flex flex-col overflow-hidden animate-entry`;
+
+                    // Construir lista de tareas HTML
+                    const tasksHtml = proj.tasks.map(task => {
+                        const hasDetails = task.details && task.details.length > 0;
+                        const detailsHtml = hasDetails ? `
+                            <ul class="mt-2 pl-3.5 border-l-2 border-slate-200 space-y-1">
+                                ${task.details.map(detail => `
+                                    <li class="text-xs text-slate-500 leading-relaxed flex items-start gap-1.5">
+                                        <span class="text-indigo-400 mt-1 text-[8px]">●</span>
+                                        <span class="${task.completed ? 'line-through opacity-70' : ''}">${escapeHTML(detail)}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        ` : '';
+
+                        return `
+                            <div class="task-item group p-3 rounded-xl border ${task.completed ? 'bg-slate-50/70 border-slate-100' : 'bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50/40'} flex items-start gap-3">
+                                <!-- Checkbox -->
+                                <div class="pt-0.5 shrink-0">
+                                    <input 
+                                        type="checkbox" 
+                                        ${task.completed ? 'checked' : ''} 
+                                        onchange="toggleTaskComplete('${task.id}')"
+                                        aria-label="Marcar como realizada"
+                                        class="custom-checkbox w-4 h-4 rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/30 cursor-pointer transition-colors"
+                                    >
+                                </div>
+
+                                <!-- Contenido de la Tarea -->
+                                <div class="flex-1 min-w-0 cursor-pointer" onclick="toggleTaskComplete('${task.id}')">
+                                    <p class="text-sm font-medium leading-snug break-words transition-all ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}">
+                                        ${escapeHTML(task.title)}
+                                    </p>
+                                    ${detailsHtml}
+                                </div>
+
+                                <!-- Botón Eliminar Definitivamente -->
+                                <button 
+                                    type="button"
+                                    onclick="deleteTask('${task.id}')"
+                                    title="Eliminar tarea definitivamente"
+                                    class="shrink-0 p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-all cursor-pointer"
+                                >
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+
+                    card.innerHTML = `
+                        <!-- Encabezado de la Tarjeta de Proyecto -->
+                        <div class="p-4 pb-3 border-b border-slate-100">
+                            <div class="flex items-start justify-between gap-2">
+                                <h2 class="text-sm font-bold text-slate-900 tracking-tight leading-snug">
+                                    ${escapeHTML(proj.name)}
+                                </h2>
+                                <button 
+                                    type="button"
+                                    onclick="openProjectModal('${escapeAttr(proj.name)}')"
+                                    title="Agregar tarea a ${escapeAttr(proj.name)}"
+                                    class="shrink-0 p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                                >
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+
+                            <!-- Contadores y Progreso -->
+                            <div class="mt-2.5 flex items-center justify-between text-xs">
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${accent.badge}">
+                                        ${proj.pendingCount} ${proj.pendingCount === 1 ? 'pendiente' : 'pendientes'}
+                                    </span>
+                                    ${proj.completedCount > 0 ? `
+                                        <span class="text-slate-400 font-medium">
+                                            · ${proj.completedCount} ${proj.completedCount === 1 ? 'lista' : 'listas'}
+                                        </span>
+                                    ` : ''}
+                                </div>
+                                <span class="text-[11px] font-semibold text-slate-400">${progressPct}%</span>
+                            </div>
+
+                            <!-- Barra de progreso sutil -->
+                            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-2">
+                                <div class="h-full ${accent.bar} transition-all duration-300 rounded-full" style="width: ${progressPct}%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Cuerpo de Tareas del Proyecto -->
+                        <div class="p-3 space-y-2 bg-slate-50/30 flex-1">
+                            ${tasksHtml}
+                        </div>
+                    `;
+
+                    board.appendChild(card);
+                });
+            }
+
+            // Re-inicializar iconos Lucide en el DOM recién creado
+            lucide.createIcons();
+        }
+
+        function updateKPIs() {
+            // Proyectos activos: proyectos únicos con al menos 1 tarea en memoria
+            const activeProjectsSet = new Set(tasks.map(t => t.project.trim()));
+            const totalCompleted = tasks.filter(t => t.completed).length;
+            const totalPending = tasks.length - totalCompleted;
+
+            document.getElementById('kpi-projects').textContent = activeProjectsSet.size;
+            document.getElementById('kpi-pending').textContent = totalPending;
+            document.getElementById('kpi-completed').textContent = totalCompleted;
+        }
+
+        function updateProjectDatalist() {
+            const datalist = document.getElementById('projects-datalist');
+            const activeProjects = Array.from(new Set(tasks.map(t => t.project.trim()))).sort();
+            datalist.innerHTML = activeProjects
+                .map(p => `<option value="${escapeAttr(p)}">`)
+                .join('');
+        }
+
+        // =========================================================================
+        // ACCIONES DE GESTIÓN DE TAREAS (CRUD)
+        // =========================================================================
+        function addTask(project, title, rawDetails = '') {
+            const cleanProject = project.trim();
+            const cleanTitle = title.trim();
+            if (!cleanProject || !cleanTitle) return;
+
+            // Convertir líneas no vacías en arreglo de detalles/subtareas
+            const detailsArray = rawDetails
+                .split('\n')
+                .map(line => line.replace(/^[-•*]\s*/, '').trim())
+                .filter(line => line.length > 0);
+
+            const newTask = {
+                id: 'task-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+                project: cleanProject,
+                title: cleanTitle,
+                details: detailsArray,
+                completed: false,
+                createdAt: Date.now()
+            };
+
+            tasks.unshift(newTask);
+            saveTasks();
+            renderDashboard();
+            showToast(`Actividad agregada a "${cleanProject}"`);
+        }
+
+        function toggleTaskComplete(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            task.completed = !task.completed;
+            saveTasks();
+            renderDashboard();
+        }
+
+        function deleteTask(taskId) {
+            const index = tasks.findIndex(t => t.id === taskId);
+            if (index === -1) return;
+
+            const deletedTask = tasks[index];
+            // Eliminación definitiva de memoria y localStorage
+            tasks.splice(index, 1);
+            saveTasks();
+            renderDashboard();
+
+            // Verificar si el proyecto quedó sin tareas para notificar su ocultamiento automático
+            const remainingInProject = tasks.some(t => t.project.trim() === deletedTask.project.trim());
+            if (!remainingInProject) {
+                showToast(`Tarea eliminada. Proyecto "${deletedTask.project}" ocultado por no tener pendientes.`);
+            } else {
+                showToast('Tarea eliminada definitivamente');
+            }
+        }
+
+        // =========================================================================
+        // MANEJADORES DE FORMULARIOS, FILTROS Y MODALES
+        // =========================================================================
+        function handleQuickAdd(event) {
+            event.preventDefault();
+            const projectInput = document.getElementById('input-project');
+            const taskInput = document.getElementById('input-task');
+            const detailsInput = document.getElementById('input-details');
+
+            addTask(projectInput.value, taskInput.value, detailsInput.value);
+
+            // Limpiar campos de tarea manteniendo o limpiando proyecto según comodidad
+            taskInput.value = '';
+            detailsInput.value = '';
+            taskInput.focus();
+        }
+
+        function toggleDetailsInput() {
+            const container = document.getElementById('details-container');
+            const textSpan = document.getElementById('toggle-details-text');
+            const isHidden = container.classList.contains('hidden');
+            
+            if (isHidden) {
+                container.classList.remove('hidden');
+                textSpan.textContent = '− Ocultar notas';
+                document.getElementById('input-details').focus();
+            } else {
+                container.classList.add('hidden');
+                textSpan.textContent = '+ Añadir notas / subtareas';
+            }
+        }
+
+        function setStatusFilter(status) {
+            currentFilter = status;
+            
+            // Actualizar estilos de botones
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'text-indigo-600', 'shadow-xs', 'font-semibold');
+                btn.classList.add('text-slate-600', 'font-medium');
+            });
+
+            const activeBtn = document.getElementById(`filter-${status}`);
+            activeBtn.classList.remove('text-slate-600', 'font-medium');
+            activeBtn.classList.add('bg-white', 'text-indigo-600', 'shadow-xs', 'font-semibold');
+
+            renderDashboard();
+        }
+
+        function handleFilterChange() {
+            const input = document.getElementById('search-input');
+            const clearBtn = document.getElementById('clear-search-btn');
+            searchQuery = input.value;
+            
+            if (searchQuery.length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+            renderDashboard();
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            handleFilterChange();
+        }
+
+        function resetFilters() {
+            clearSearch();
+            setStatusFilter('all');
+        }
+
+        // Modal rápido por proyecto
+        function openProjectModal(projectName) {
+            document.getElementById('modal-project-name').value = projectName;
+            document.getElementById('modal-project-title').textContent = projectName;
+            document.getElementById('modal-task-title').value = '';
+            document.getElementById('modal-task-details').value = '';
+            
+            const modal = document.getElementById('project-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => document.getElementById('modal-task-title').focus(), 50);
+        }
+
+        function closeProjectModal() {
+            const modal = document.getElementById('project-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function handleModalAdd(event) {
+            event.preventDefault();
+            const proj = document.getElementById('modal-project-name').value;
+            const title = document.getElementById('modal-task-title').value;
+            const details = document.getElementById('modal-task-details').value;
+            
+            addTask(proj, title, details);
+            closeProjectModal();
+        }
+
+        // Modal de Respaldo JSON
+        function openBackupModal() {
+            const textarea = document.getElementById('json-textarea');
+            textarea.value = JSON.stringify(tasks, null, 2);
+            const modal = document.getElementById('backup-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeBackupModal() {
+            const modal = document.getElementById('backup-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function copyJsonToClipboard() {
+            const textarea = document.getElementById('json-textarea');
+            textarea.select();
+            document.execCommand('copy');
+            showToast('JSON copiado al portapapeles');
+        }
+
+        function importJsonData() {
+            const textarea = document.getElementById('json-textarea');
+            try {
+                const parsed = JSON.parse(textarea.value);
+                if (!Array.isArray(parsed)) {
+                    throw new Error('Formato inválido');
+                }
+                // Validar estructura básica de las tareas importadas
+                const validTasks = parsed.filter(item => item && typeof item.project === 'string' && typeof item.title === 'string').map(item => ({
+                    id: item.id || 'task-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+                    project: item.project.trim(),
+                    title: item.title.trim(),
+                    details: Array.isArray(item.details) ? item.details : [],
+                    completed: Boolean(item.completed),
+                    createdAt: item.createdAt || Date.now()
+                }));
+
+                tasks = validTasks;
+                saveTasks();
+                renderDashboard();
+                closeBackupModal();
+                showToast(`Se importaron ${validTasks.length} tareas correctamente`);
+            } catch (e) {
+                showToast('Error: El texto ingresado no es un JSON válido');
+            }
+        }
+
+        // Modal de Restauración de Datos Iniciales
+        function confirmResetData() {
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function executeResetData() {
+            tasks = structuredClone(INITIAL_SEED_TASKS);
+            saveTasks();
+            resetFilters();
+            closeConfirmModal();
+            showToast('Cartelera inicial restaurada');
+        }
+
+        // =========================================================================
+        // UTILIDADES DE SEGURIDAD Y NOTIFICACIONES
+        // =========================================================================
+        function escapeHTML(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeAttr(str) {
+            return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        let toastTimeout;
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = message;
+            
+            toast.classList.remove('translate-y-16', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('translate-y-16', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 3000);
+        }
+
+        // Cerrar modales con tecla Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeProjectModal();
+                closeBackupModal();
+                closeConfirmModal();
+            }
+        });
+
+        // Arrancar aplicación al cargar el DOM
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
